@@ -30,7 +30,7 @@ from sympy.logic.boolalg import And, Or, Not, Xor, true, false, Boolean
 from sympy.utilities.decorator import deprecated
 from sympy.utilities.exceptions import sympy_deprecation_warning
 from sympy.utilities.iterables import (iproduct, sift, roundrobin, iterable,
-                                       subsets)
+                                       subsets, uniq)
 from sympy.utilities.misc import func_name, filldedent
 
 if TYPE_CHECKING:
@@ -1515,18 +1515,10 @@ class Union(Set, LatticeOp):
         return all(arg.is_iterable for arg in self.args)
 
     def __iter__(self):
-        # round-robin keeps infinite parts lazy, but elements shared by
-        # several args would be yielded once per arg.
-        seen = set()
-        for item in roundrobin(*(iter(arg) for arg in self.args)):
-            try:
-                if item in seen:
-                    continue
-                seen.add(item)
-            except TypeError:
-                # unhashable element: cannot deduplicate
-                pass
-            yield item
+        # roundrobin keeps infinite parts lazy, but elements shared by
+        # several args would be yielded once per arg. iter() stays eager so
+        # that iterable() still raises TypeError on non-iterable args.
+        return uniq(roundrobin(*(iter(arg) for arg in self.args)))
 
 
 class Intersection(Set, LatticeOp):
